@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Water Usage Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #0077b6;
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+    main {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, select, button {
+      margin-top: 5px;
+      padding: 8px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background: #0077b6;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #023e8a;
+    }
+    .usage-list {
+      list-style: none;
+      padding: 0;
+    }
+    .usage-list li {
+      background: #e0f7fa;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .tips {
+      background: #d8f3dc;
+      padding: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💧 Water Usage Tracker</h1>
+    <p>Monitor and manage your daily water consumption</p>
+  </header>
+
+  <main>
+    <!-- Add Usage -->
+    <div class="card">
+      <h2>Add Usage</h2>
+      <form id="usageForm">
+        <label for="amount">Amount (liters):</label>
+        <input type="number" id="amount" required>
+
+        <label for="category">Category:</label>
+        <select id="category">
+          <option>Drinking</option>
+          <option>Cooking</option>
+          <option>Cleaning</option>
+          <option>Gardening</option>
+        </select>
+
+        <button type="submit">Add Entry</button>
+      </form>
+    </div>
+
+    <!-- Usage History -->
+    <div class="card">
+      <h2>Usage History</h2>
+      <ul id="usageList" class="usage-list"></ul>
+    </div>
+
+    <!-- Total Consumption -->
+    <div class="card">
+      <h2>Total Consumption</h2>
+      <p id="total">0 liters</p>
+    </div>
+
+    <!-- Graphs -->
+    <div class="card">
+      <h2>Usage Trends</h2>
+      <canvas id="usageChart"></canvas>
+    </div>
+
+    <!-- Suggestions -->
+    <div class="card">
+      <h2>Water Saving Tips</h2>
+      <div class="tips" id="tipsBox">
+        <p>💡 Tip: Collect rainwater for gardening.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('usageForm');
+    const usageList = document.getElementById('usageList');
+    const totalDisplay = document.getElementById('total');
+    const tipsBox = document.getElementById('tipsBox');
+    let total = 0;
+    let usageData = JSON.parse(localStorage.getItem('usageData')) || [];
+
+    // Chart setup
+    const ctx = document.getElementById('usageChart').getContext('2d');
+    const usageChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: usageData.map(entry => entry.category),
+        datasets: [{
+          label: 'Water Usage (liters)',
+          data: usageData.map(entry => entry.amount),
+          backgroundColor: '#0077b6'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Load existing data
+    function loadData() {
+      usageList.innerHTML = '';
+      total = 0;
+      usageData.forEach(entry => {
+        total += entry.amount;
+        const li = document.createElement('li');
+        li.textContent = entry.amount + " liters - " + entry.category;
+        usageList.appendChild(li);
+      });
+      totalDisplay.textContent = total + " liters";
+      updateChart();
+      showTip();
+    }
+
+    // Update chart
+    function updateChart() {
+      usageChart.data.labels = usageData.map(entry => entry.category);
+      usageChart.data.datasets[0].data = usageData.map(entry => entry.amount);
+      usageChart.update();
+    }
+
+    // Show tips based on usage
+    function showTip() {
+      if (total > 100) {
+        tipsBox.innerHTML = "<p>⚠️ High usage! Try reusing RO wastewater for plants.</p>";
+      } else if (total > 50) {
+        tipsBox.innerHTML = "<p>💡 Moderate usage. Use a bucket instead of a shower to save water.</p>";
+      } else {
+        tipsBox.innerHTML = "<p>✅ Good job! Keep collecting rainwater for gardening.</p>";
+      }
+    }
+
+    // Add new entry
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const category = document.getElementById('category').value;
+
+      if (!isNaN(amount) && amount > 0) {
+        const entry = { amount, category };
+        usageData.push(entry);
+        localStorage.setItem('usageData', JSON.stringify(usageData));
+        loadData();
+        form.reset();
+      }
+    });
+
+    // Initialize
+    loadData();
+  </script>
+</body>
+</html>
