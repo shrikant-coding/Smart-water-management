@@ -2,49 +2,64 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Water Usage Tracker</title>
+  <title>💧 Water Usage Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f0f8ff;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #caf0f8, #ade8f4);
       margin: 0;
       padding: 0;
+      animation: fadeIn 1.5s ease-in-out;
     }
     header {
-      background: #0077b6;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
       color: white;
-      padding: 15px;
+      padding: 20px;
       text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2.5em;
+      letter-spacing: 2px;
     }
     main {
       padding: 20px;
-      max-width: 800px;
+      max-width: 900px;
       margin: auto;
     }
     .card {
       background: white;
       padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: scale(1.02);
     }
     label {
       display: block;
       margin-top: 10px;
+      font-weight: bold;
     }
     input, select, button {
       margin-top: 5px;
-      padding: 8px;
+      padding: 10px;
       width: 100%;
       border: 1px solid #ccc;
-      border-radius: 4px;
+      border-radius: 6px;
+      font-size: 1em;
     }
     button {
       background: #0077b6;
       color: white;
       border: none;
       cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s ease;
     }
     button:hover {
       background: #023e8a;
@@ -55,37 +70,58 @@
     }
     .usage-list li {
       background: #e0f7fa;
-      margin: 5px 0;
-      padding: 10px;
-      border-radius: 4px;
+      margin: 8px 0;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 1.1em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: slideIn 0.5s ease;
     }
     .tips {
       background: #d8f3dc;
-      padding: 10px;
-      border-radius: 6px;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 1.1em;
+      font-style: italic;
+      animation: pulse 2s infinite;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+    @keyframes slideIn {
+      from {transform: translateX(-20px); opacity: 0;}
+      to {transform: translateX(0); opacity: 1;}
+    }
+    @keyframes pulse {
+      0% {background-color: #d8f3dc;}
+      50% {background-color: #b7e4c7;}
+      100% {background-color: #d8f3dc;}
     }
   </style>
 </head>
 <body>
   <header>
     <h1>💧 Water Usage Tracker</h1>
-    <p>Monitor and manage your daily water consumption</p>
+    <p>Track, visualize, and save water creatively</p>
   </header>
 
   <main>
     <!-- Add Usage -->
     <div class="card">
-      <h2>Add Usage</h2>
+      <h2>➕ Add Usage</h2>
       <form id="usageForm">
         <label for="amount">Amount (liters):</label>
         <input type="number" id="amount" required>
 
         <label for="category">Category:</label>
         <select id="category">
-          <option>Drinking</option>
-          <option>Cooking</option>
-          <option>Cleaning</option>
-          <option>Gardening</option>
+          <option>🥤 Drinking</option>
+          <option>🍳 Cooking</option>
+          <option>🧽 Cleaning</option>
+          <option>🌱 Gardening</option>
         </select>
 
         <button type="submit">Add Entry</button>
@@ -94,27 +130,27 @@
 
     <!-- Usage History -->
     <div class="card">
-      <h2>Usage History</h2>
+      <h2>📜 Usage History</h2>
       <ul id="usageList" class="usage-list"></ul>
     </div>
 
     <!-- Total Consumption -->
     <div class="card">
-      <h2>Total Consumption</h2>
+      <h2>📊 Total Consumption</h2>
       <p id="total">0 liters</p>
     </div>
 
     <!-- Graphs -->
     <div class="card">
-      <h2>Usage Trends</h2>
+      <h2>📈 Usage Trends</h2>
       <canvas id="usageChart"></canvas>
     </div>
 
     <!-- Suggestions -->
     <div class="card">
-      <h2>Water Saving Tips</h2>
+      <h2>💡 Water Saving Tips</h2>
       <div class="tips" id="tipsBox">
-        <p>💡 Tip: Collect rainwater for gardening.</p>
+        <p>🌧 Collect rainwater for gardening.</p>
       </div>
     </div>
   </main>
@@ -130,19 +166,19 @@
     // Chart setup
     const ctx = document.getElementById('usageChart').getContext('2d');
     const usageChart = new Chart(ctx, {
-      type: 'bar',
+      type: 'doughnut',
       data: {
         labels: usageData.map(entry => entry.category),
         datasets: [{
           label: 'Water Usage (liters)',
           data: usageData.map(entry => entry.amount),
-          backgroundColor: '#0077b6'
+          backgroundColor: ['#0077b6','#00b4d8','#90e0ef','#48cae4']
         }]
       },
       options: {
         responsive: true,
-        scales: {
-          y: { beginAtZero: true }
+        plugins: {
+          legend: { position: 'bottom' }
         }
       }
     });
@@ -172,11 +208,11 @@
     // Show tips based on usage
     function showTip() {
       if (total > 100) {
-        tipsBox.innerHTML = "<p>⚠️ High usage! Try reusing RO wastewater for plants.</p>";
+        tipsBox.innerHTML = "<p>⚠️ High usage! Reuse wastewater for plants.</p>";
       } else if (total > 50) {
-        tipsBox.innerHTML = "<p>💡 Moderate usage. Use a bucket instead of a shower to save water.</p>";
+        tipsBox.innerHTML = "<p>💡 Moderate usage. Try bucket baths instead of showers.</p>";
       } else {
-        tipsBox.innerHTML = "<p>✅ Good job! Keep collecting rainwater for gardening.</p>";
+        tipsBox.innerHTML = "<p>✅ Great job! Keep conserving water.</p>";
       }
     }
 
