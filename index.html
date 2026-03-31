@@ -3,19 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <title>♻️ Wastewater Reuse Tracker</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
 <style>
 body { font-family: Arial; margin:0; background:#f4f9fb; }
 header { background:#0077b6; color:white; padding:20px; text-align:center; }
-.container { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; padding:20px; }
-.card { background:white; padding:15px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
-input,select,button { width:100%; padding:8px; margin:5px 0; }
-button { background:#0077b6; color:white; border:none; cursor:pointer; }
-button:hover { background:#023e8a; }
-li { padding:5px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; }
-.actions button { width:auto; margin-left:5px; padding:4px 6px; }
-.tips { background:#d8f3dc; padding:10px; border-radius:8px; }
+
+.container {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:20px;
+  padding:20px;
+}
+
+.card {
+  background:white;
+  padding:15px;
+  border-radius:12px;
+  box-shadow:0 6px 15px rgba(0,0,0,0.1);
+  transform: translateY(20px);
+  opacity:0;
+}
+
+input,select,button {
+  width:100%;
+  padding:8px;
+  margin:5px 0;
+}
+
+button {
+  background:#0077b6;
+  color:white;
+  border:none;
+  cursor:pointer;
+  transition: transform 0.2s ease, background 0.3s;
+}
+
+button:hover {
+  background:#023e8a;
+  transform: scale(1.05);
+}
+
+li {
+  padding:5px;
+  border-bottom:1px solid #ddd;
+  display:flex;
+  justify-content:space-between;
+  opacity:0;
+}
+
+.actions button {
+  width:auto;
+  margin-left:5px;
+  padding:4px 6px;
+}
+
+/* Progress Bar */
+.progress {
+  height: 15px;
+  background: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg,#00b4d8,#90dbf4);
+}
 </style>
 </head>
 
@@ -27,26 +84,26 @@ li { padding:5px; border-bottom:1px solid #ddd; display:flex; justify-content:sp
 
 <div class="container">
 
-<!-- Usage -->
 <div class="card">
-<h2>Add Fresh Water</h2>
+<h3>Add Usage</h3>
 <form id="usageForm">
 <input type="number" id="amount" placeholder="Liters" required>
 <select id="category">
-<option>Drinking</option><option>Cooking</option>
-<option>Cleaning</option><option>Gardening</option>
+<option>Drinking</option>
+<option>Cooking</option>
+<option>Cleaning</option>
+<option>Gardening</option>
 </select>
 <button>Add</button>
 </form>
 </div>
 
-<!-- Reuse -->
 <div class="card">
-<h2>Add Reuse</h2>
+<h3>Add Reuse</h3>
 <form id="reuseForm">
 <input type="number" id="reuseAmount" placeholder="Liters" required>
 <select id="reuseCategory">
-<option>RO Wastewater</option>
+<option>RO</option>
 <option>Laundry</option>
 <option>Rainwater</option>
 <option>Kitchen</option>
@@ -55,34 +112,27 @@ li { padding:5px; border-bottom:1px solid #ddd; display:flex; justify-content:sp
 </form>
 </div>
 
-<!-- Lists -->
 <div class="card"><h3>Usage</h3><ul id="usageList"></ul></div>
 <div class="card"><h3>Reuse</h3><ul id="reuseList"></ul></div>
 
-<!-- Totals -->
 <div class="card">
 <h3>Totals</h3>
 <p id="total"></p>
 <p id="reuseTotal"></p>
 <p id="netUsage"></p>
+
+<div class="progress">
+<div id="progressBar" class="progress-bar"></div>
+</div>
 </div>
 
-<!-- Chart -->
 <div class="card">
 <canvas id="chart"></canvas>
 </div>
 
-<!-- Analytics -->
-<div class="card">
-<h3>📅 Analytics</h3>
-<p id="daily"></p>
-<p id="monthly"></p>
-</div>
-
-<!-- Tips -->
 <div class="card">
 <h3>Tips</h3>
-<div id="tipsBox" class="tips"></div>
+<div id="tipsBox"></div>
 </div>
 
 </div>
@@ -94,75 +144,80 @@ const reuseForm = document.getElementById('reuseForm');
 let usageData = JSON.parse(localStorage.getItem('usageData')) || [];
 let reuseData = JSON.parse(localStorage.getItem('reuseData')) || [];
 
-// Chart
 const chart = new Chart(document.getElementById('chart'), {
 type:'bar',
 data:{ labels:['Fresh','Reuse'], datasets:[{data:[0,0]}] }
 });
 
-// Utility
-function save() {
-localStorage.setItem('usageData', JSON.stringify(usageData));
-localStorage.setItem('reuseData', JSON.stringify(reuseData));
+function save(){
+localStorage.setItem('usageData',JSON.stringify(usageData));
+localStorage.setItem('reuseData',JSON.stringify(reuseData));
 }
 
-function now() {
-return new Date().toISOString();
+function animateValue(el,start,end,duration){
+let startTime=null;
+function step(t){
+if(!startTime) startTime=t;
+let progress=t-startTime;
+let value=Math.min(start+(end-start)*(progress/duration),end);
+el.innerText=Math.floor(value);
+if(progress<duration) requestAnimationFrame(step);
+}
+requestAnimationFrame(step);
 }
 
-// Load UI
-function load() {
-let total=0, reuseTotal=0;
+function load(){
+let total=0,reuseTotal=0;
 
-const usageList = document.getElementById('usageList');
-const reuseList = document.getElementById('reuseList');
+const usageList=document.getElementById('usageList');
+const reuseList=document.getElementById('reuseList');
 
 usageList.innerHTML='';
 reuseList.innerHTML='';
 
 usageData.forEach((e,i)=>{
 total+=e.amount;
-usageList.appendChild(createItem(e,i,'usage'));
+let li=createItem(e,i,'usage');
+usageList.appendChild(li);
+gsap.to(li,{opacity:1,y:0,duration:0.5});
 });
 
 reuseData.forEach((e,i)=>{
 reuseTotal+=e.amount;
-reuseList.appendChild(createItem(e,i,'reuse'));
+let li=createItem(e,i,'reuse');
+reuseList.appendChild(li);
+gsap.to(li,{opacity:1,y:0,duration:0.5});
 });
 
-// Totals
-document.getElementById('total').innerText=`Fresh: ${total}`;
-document.getElementById('reuseTotal').innerText=`Reuse: ${reuseTotal}`;
-document.getElementById('netUsage').innerText=`Net: ${total-reuseTotal}`;
+// Animated numbers
+animateValue(totalEl,0,total,800);
+animateValue(reuseEl,0,reuseTotal,800);
+animateValue(netEl,0,total-reuseTotal,800);
 
 // Chart
 chart.data.datasets[0].data=[total,reuseTotal];
 chart.update();
 
-// Tips
+// Progress bar animation
 const percent = total? (reuseTotal/total*100):0;
-const tipsBox = document.getElementById('tipsBox');
+gsap.to("#progressBar",{width:percent+"%",duration:1});
 
-if(percent>50) tipsBox.innerText="Excellent reuse!";
-else if(percent>20) tipsBox.innerText="Good, improve more.";
-else tipsBox.innerText="Start reusing water.";
-
-// Analytics
-updateAnalytics();
+// Tips
+const tipsBox=document.getElementById('tipsBox');
+if(percent>50) tipsBox.innerText="🔥 Excellent reuse!";
+else if(percent>20) tipsBox.innerText="👍 Good progress";
+else tipsBox.innerText="⚠️ Start reusing water";
 }
 
-// Create list item with edit/delete
-function createItem(entry,index,type) {
+function createItem(entry,index,type){
 const li=document.createElement('li');
 
-const text=document.createElement('span');
-text.innerText=`${entry.amount}L - ${entry.category}`;
-li.appendChild(text);
+const span=document.createElement('span');
+span.innerText=`${entry.amount}L - ${entry.category}`;
+li.appendChild(span);
 
 const actions=document.createElement('div');
-actions.className='actions';
 
-// Delete
 const del=document.createElement('button');
 del.innerText='❌';
 del.onclick=()=>{
@@ -171,15 +226,11 @@ else reuseData.splice(index,1);
 save(); load();
 };
 
-// Edit
 const edit=document.createElement('button');
 edit.innerText='✏️';
 edit.onclick=()=>{
-const newVal=prompt("Enter new amount",entry.amount);
-if(newVal){
-entry.amount=parseFloat(newVal);
-save(); load();
-}
+let val=prompt("Edit value",entry.amount);
+if(val){ entry.amount=parseFloat(val); save(); load();}
 };
 
 actions.appendChild(edit);
@@ -189,45 +240,34 @@ li.appendChild(actions);
 return li;
 }
 
-// Analytics logic
-function updateAnalytics() {
-const today = new Date().toISOString().slice(0,10);
-const month = today.slice(0,7);
-
-let daily=0, monthly=0;
-
-usageData.forEach(e=>{
-if(e.time?.startsWith(today)) daily+=e.amount;
-if(e.time?.startsWith(month)) monthly+=e.amount;
-});
-
-document.getElementById('daily').innerText=`Today Usage: ${daily}`;
-document.getElementById('monthly').innerText=`Monthly Usage: ${monthly}`;
-}
-
-// Add usage
+// Forms
 usageForm.onsubmit=e=>{
 e.preventDefault();
-const amt=parseFloat(amount.value);
+let amt=parseFloat(amount.value);
 if(amt>0){
-usageData.push({amount:amt,category:category.value,time:now()});
-save(); load();
-usageForm.reset();
+usageData.push({amount:amt,category:category.value});
+save(); load(); usageForm.reset();
 }
 };
 
-// Add reuse
 reuseForm.onsubmit=e=>{
 e.preventDefault();
-const amt=parseFloat(reuseAmount.value);
+let amt=parseFloat(reuseAmount.value);
 if(amt>0){
-reuseData.push({amount:amt,category:reuseCategory.value,time:now()});
-save(); load();
-reuseForm.reset();
+reuseData.push({amount:amt,category:reuseCategory.value});
+save(); load(); reuseForm.reset();
 }
 };
 
+// Initial animations
+gsap.from("header",{y:-50,opacity:0,duration:1});
+gsap.to(".card",{opacity:1,y:0,stagger:0.2,duration:0.8});
+
 // Init
+const totalEl=document.getElementById('total');
+const reuseEl=document.getElementById('reuseTotal');
+const netEl=document.getElementById('netUsage');
+
 load();
 </script>
 
