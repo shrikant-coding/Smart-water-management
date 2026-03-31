@@ -34,10 +34,6 @@
       margin-bottom: 25px;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }
-    .card:hover {
-      transform: scale(1.02);
     }
     label {
       display: block;
@@ -58,7 +54,6 @@
       border: none;
       cursor: pointer;
       font-weight: bold;
-      transition: background 0.3s ease;
     }
     button:hover {
       background: #023e8a;
@@ -83,12 +78,6 @@
       border-radius: 8px;
       font-size: 1.1em;
       font-style: italic;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% {background-color: #d8f3dc;}
-      50% {background-color: #b7e4c7;}
-      100% {background-color: #d8f3dc;}
     }
   </style>
 </head>
@@ -184,8 +173,6 @@
 
     let usageData = JSON.parse(localStorage.getItem('usageData')) || [];
     let reuseData = JSON.parse(localStorage.getItem('reuseData')) || [];
-    let total = 0;
-    let reuseTotal = 0;
 
     // Chart setup
     const ctx = document.getElementById('usageChart').getContext('2d');
@@ -214,8 +201,8 @@
     function loadData() {
       usageList.innerHTML = '';
       reuseList.innerHTML = '';
-      total = 0;
-      reuseTotal = 0;
+      let total = 0;
+      let reuseTotal = 0;
 
       usageData.forEach(entry => {
         total += entry.amount;
@@ -235,18 +222,18 @@
       reuseDisplay.textContent = "Reused Water: " + reuseTotal + " liters";
       netDisplay.textContent = "Net Usage: " + (total - reuseTotal) + " liters";
 
-      updateChart();
-      showTip();
+      updateChart(total, reuseTotal);
+      showTip(total, reuseTotal);
     }
 
     // Update chart
-    function updateChart() {
+    function updateChart(total, reuseTotal) {
       usageChart.data.datasets[0].data = [total, reuseTotal];
       usageChart.update();
     }
 
     // Show tips based on reuse percentage
-    function showTip() {
+    function showTip(total, reuseTotal) {
       const reusePercent = total > 0 ? (reuseTotal / total * 100).toFixed(1) : 0;
       if (reusePercent >= 50) {
         tipsBox.innerHTML = "<p>🌟 Amazing! You’re reusing over 50% of your water.</p>";
@@ -258,4 +245,20 @@
     }
 
     // Add new usage entry
-    usageForm.addEvent
+    usageForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const category = document.getElementById('category').value;
+
+      if (!isNaN(amount) && amount > 0) {
+      const entry = { amount, category };
+      reuseData.push(entry);
+      localStorage.setItem('reuseData', JSON.stringify(reuseData));
+      loadData();
+      reuseForm.reset();
+    }
+  });
+
+  // Initialize
+  loadData();
+</script>
