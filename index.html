@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>💧 Water Usage Tracker</title>
+  <title>♻️ Wastewater Reuse Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -10,7 +10,6 @@
       background: linear-gradient(to right, #caf0f8, #ade8f4);
       margin: 0;
       padding: 0;
-      animation: fadeIn 1.5s ease-in-out;
     }
     header {
       background: linear-gradient(135deg, #0077b6, #00b4d8);
@@ -26,7 +25,7 @@
     }
     main {
       padding: 20px;
-      max-width: 900px;
+      max-width: 1000px;
       margin: auto;
     }
     .card {
@@ -77,7 +76,6 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      animation: slideIn 0.5s ease;
     }
     .tips {
       background: #d8f3dc;
@@ -86,14 +84,6 @@
       font-size: 1.1em;
       font-style: italic;
       animation: pulse 2s infinite;
-    }
-    @keyframes fadeIn {
-      from {opacity: 0;}
-      to {opacity: 1;}
-    }
-    @keyframes slideIn {
-      from {transform: translateX(-20px); opacity: 0;}
-      to {transform: translateX(0); opacity: 1;}
     }
     @keyframes pulse {
       0% {background-color: #d8f3dc;}
@@ -104,14 +94,14 @@
 </head>
 <body>
   <header>
-    <h1>💧 Water Usage Tracker</h1>
-    <p>Track, visualize, and save water creatively</p>
+    <h1>💧♻️ Wastewater Reuse Tracker</h1>
+    <p>Track consumption, reuse wastewater, and calculate net usage</p>
   </header>
 
   <main>
     <!-- Add Usage -->
     <div class="card">
-      <h2>➕ Add Usage</h2>
+      <h2>➕ Add Fresh Water Usage</h2>
       <form id="usageForm">
         <label for="amount">Amount (liters):</label>
         <input type="number" id="amount" required>
@@ -124,7 +114,26 @@
           <option>🌱 Gardening</option>
         </select>
 
-        <button type="submit">Add Entry</button>
+        <button type="submit">Add Usage</button>
+      </form>
+    </div>
+
+    <!-- Add Reuse -->
+    <div class="card">
+      <h2>♻️ Add Wastewater Reuse</h2>
+      <form id="reuseForm">
+        <label for="reuseAmount">Amount Reused (liters):</label>
+        <input type="number" id="reuseAmount" required>
+
+        <label for="reuseCategory">Reuse Source:</label>
+        <select id="reuseCategory">
+          <option>RO Wastewater</option>
+          <option>Laundry Greywater</option>
+          <option>Rainwater Harvesting</option>
+          <option>Kitchen Wastewater</option>
+        </select>
+
+        <button type="submit">Add Reuse</button>
       </form>
     </div>
 
@@ -134,15 +143,23 @@
       <ul id="usageList" class="usage-list"></ul>
     </div>
 
-    <!-- Total Consumption -->
+    <!-- Reuse History -->
     <div class="card">
-      <h2>📊 Total Consumption</h2>
-      <p id="total">0 liters</p>
+      <h2>♻️ Reuse History</h2>
+      <ul id="reuseList" class="usage-list"></ul>
+    </div>
+
+    <!-- Totals -->
+    <div class="card">
+      <h2>📊 Totals</h2>
+      <p id="total">Fresh Water: 0 liters</p>
+      <p id="reuseTotal">Reused Water: 0 liters</p>
+      <p id="netUsage">Net Usage: 0 liters</p>
     </div>
 
     <!-- Graphs -->
     <div class="card">
-      <h2>📈 Usage Trends</h2>
+      <h2>📈 Usage vs Reuse Trends</h2>
       <canvas id="usageChart"></canvas>
     </div>
 
@@ -156,29 +173,39 @@
   </main>
 
   <script>
-    const form = document.getElementById('usageForm');
+    const usageForm = document.getElementById('usageForm');
+    const reuseForm = document.getElementById('reuseForm');
     const usageList = document.getElementById('usageList');
+    const reuseList = document.getElementById('reuseList');
     const totalDisplay = document.getElementById('total');
+    const reuseDisplay = document.getElementById('reuseTotal');
+    const netDisplay = document.getElementById('netUsage');
     const tipsBox = document.getElementById('tipsBox');
-    let total = 0;
+
     let usageData = JSON.parse(localStorage.getItem('usageData')) || [];
+    let reuseData = JSON.parse(localStorage.getItem('reuseData')) || [];
+    let total = 0;
+    let reuseTotal = 0;
 
     // Chart setup
     const ctx = document.getElementById('usageChart').getContext('2d');
     const usageChart = new Chart(ctx, {
-      type: 'doughnut',
+      type: 'bar',
       data: {
-        labels: usageData.map(entry => entry.category),
+        labels: ['Fresh Water', 'Reused Water'],
         datasets: [{
-          label: 'Water Usage (liters)',
-          data: usageData.map(entry => entry.amount),
-          backgroundColor: ['#0077b6','#00b4d8','#90e0ef','#48cae4']
+          label: 'Liters',
+          data: [0,0],
+          backgroundColor: ['#0077b6','#48cae4']
         }]
       },
       options: {
         responsive: true,
         plugins: {
-          legend: { position: 'bottom' }
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true }
         }
       }
     });
@@ -186,53 +213,49 @@
     // Load existing data
     function loadData() {
       usageList.innerHTML = '';
+      reuseList.innerHTML = '';
       total = 0;
+      reuseTotal = 0;
+
       usageData.forEach(entry => {
         total += entry.amount;
         const li = document.createElement('li');
         li.textContent = entry.amount + " liters - " + entry.category;
         usageList.appendChild(li);
       });
-      totalDisplay.textContent = total + " liters";
+
+      reuseData.forEach(entry => {
+        reuseTotal += entry.amount;
+        const li = document.createElement('li');
+        li.textContent = entry.amount + " liters - " + entry.category;
+        reuseList.appendChild(li);
+      });
+
+      totalDisplay.textContent = "Fresh Water: " + total + " liters";
+      reuseDisplay.textContent = "Reused Water: " + reuseTotal + " liters";
+      netDisplay.textContent = "Net Usage: " + (total - reuseTotal) + " liters";
+
       updateChart();
       showTip();
     }
 
     // Update chart
     function updateChart() {
-      usageChart.data.labels = usageData.map(entry => entry.category);
-      usageChart.data.datasets[0].data = usageData.map(entry => entry.amount);
+      usageChart.data.datasets[0].data = [total, reuseTotal];
       usageChart.update();
     }
 
-    // Show tips based on usage
+    // Show tips based on reuse percentage
     function showTip() {
-      if (total > 100) {
-        tipsBox.innerHTML = "<p>⚠️ High usage! Reuse wastewater for plants.</p>";
-      } else if (total > 50) {
-        tipsBox.innerHTML = "<p>💡 Moderate usage. Try bucket baths instead of showers.</p>";
+      const reusePercent = total > 0 ? (reuseTotal / total * 100).toFixed(1) : 0;
+      if (reusePercent >= 50) {
+        tipsBox.innerHTML = "<p>🌟 Amazing! You’re reusing over 50% of your water.</p>";
+      } else if (reusePercent >= 20) {
+        tipsBox.innerHTML = "<p>💡 Good progress! Try reusing laundry water for gardening.</p>";
       } else {
-        tipsBox.innerHTML = "<p>✅ Great job! Keep conserving water.</p>";
+        tipsBox.innerHTML = "<p>⚠️ Low reuse. Start with simple steps like collecting RO wastewater.</p>";
       }
     }
 
-    // Add new entry
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const amount = parseFloat(document.getElementById('amount').value);
-      const category = document.getElementById('category').value;
-
-      if (!isNaN(amount) && amount > 0) {
-        const entry = { amount, category };
-        usageData.push(entry);
-        localStorage.setItem('usageData', JSON.stringify(usageData));
-        loadData();
-        form.reset();
-      }
-    });
-
-    // Initialize
-    loadData();
-  </script>
-</body>
-</html>
+    // Add new usage entry
+    usageForm.addEvent
